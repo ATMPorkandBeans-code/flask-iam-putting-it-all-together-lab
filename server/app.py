@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
-from flask import request, session
+from flask import request, session, send_from_directory
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
+from pathlib import Path
 
 from server.config import app, db, api
 from server.models import User, Recipe, UserSchema, RecipeSchema
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+CLIENT_BUILD_DIR = BASE_DIR / 'client' / 'build'
 
 class Signup(Resource):
    def post(self):
@@ -98,6 +102,17 @@ api.add_resource(CheckSession, '/check_session', endpoint='check_session')
 api.add_resource(Login, '/login', endpoint='login')
 api.add_resource(Logout, '/logout', endpoint='logout')
 api.add_resource(RecipeIndex, '/recipes', endpoint='recipes')
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    if CLIENT_BUILD_DIR.exists():
+        if path and (CLIENT_BUILD_DIR / path).exists():
+            return send_from_directory(str(CLIENT_BUILD_DIR), path)
+        return send_from_directory(str(CLIENT_BUILD_DIR), 'index.html')
+    return {
+        'error': 'React build not found. Run npm install && npm run build in client'
+    }, 404
 
 
 if __name__ == '__main__':
